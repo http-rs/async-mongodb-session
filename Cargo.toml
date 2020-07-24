@@ -1,0 +1,20 @@
+[package]
+name = "async-mongodb-session"
+version = "1.0.0"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/yoshuawuyts/async-mongodb-session"
+documentation = "https://docs.rs/async-mongodb-session"
+description = "An async-session implementation for MongoDB"
+readme = "README.md"
+edition = "2018"
+keywords = []
+categories = []
+authors = [
+    "Yoshua Wuyts <yoshuawuyts@gmail.com>"
+]
+
+[features]
+
+[dependencies]
+
+[dev-dependencies]
