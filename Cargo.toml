@@ -10,11 +10,21 @@ edition = "2018"
 keywords = []
 categories = []
 authors = [
-    "Yoshua Wuyts <yoshuawuyts@gmail.com>"
+    "Yoshua Wuyts <yoshuawuyts@gmail.com>",
+    "Irina Shestak <irina.shestak@gmail.com>",
 ]
 
 [features]
 
 [dependencies]
+mongodb = { version = "1.0.0", default-features = false, features = ["async-std-runtime"] }
+async-session = "1.0.2"
+async-trait = "0.1.36"
+serde_json = "1.0.56"
 
 [dev-dependencies]
+async-std = { version = "1.6.2", features = ["attributes"] }
+
+[patch.crates-io]
+async-session = { git = "https://github.com/jbr/async-session", branch = "tide" }
+mongodb = { path = "../mongo-rust-driver" }
