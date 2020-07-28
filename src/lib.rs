@@ -10,7 +10,7 @@
 #![deny(missing_debug_implementations, nonstandard_style)]
 #![warn(missing_docs, missing_doc_code_examples, unreachable_pub)]
 
-use async_session::{Session, SessionStore};
+use async_session::{Result, Session, SessionStore};
 use async_trait::async_trait;
 use mongodb::bson::doc;
 use mongodb::Client;
@@ -42,33 +42,40 @@ impl MongodbSessionStore {
 
 #[async_trait]
 impl SessionStore for MongodbSessionStore {
-    async fn store_session(&self, session: Session) -> Option<String> {
+    async fn store_session(&self, session: Session) -> Result<Option<String>> {
         let coll = self.client.database(&self.db).collection(&self.coll_name);
 
         // TODO: mongodb supports TTL for auto-expiry somehow, need to figure out how!
-        let value = serde_json::to_string(&session).ok()?;
+        let value = serde_json::to_string(&session)?;
         let id = session.id();
         let doc = doc! { "session_id": id, "session": value };
-        coll.insert_one(doc, None).await.ok()?;
+        coll.insert_one(doc, None).await?;
 
-        session.into_cookie_value()
+        Ok(session.into_cookie_value())
     }
 
-    async fn load_session(&self, cookie_value: String) -> Option<Session> {
-        let id = Session::id_from_cookie_value(&cookie_value).ok()?;
+    async fn load_session(&self, cookie_value: String) -> Result<Option<Session>> {
+        let id = Session::id_from_cookie_value(&cookie_value)?;
         let coll = self.client.database(&self.db).collection(&self.coll_name);
 
         let filter = doc! { "session_id": id };
-        let doc = coll.find_one(filter, None).await.ok()??;
-        let value = doc.get_str("session").ok()?;
-        serde_json::from_str(value).ok()
+        let result = coll.find_one(filter, None).await?;
+        match result {
+            None => Ok(None),
+            Some(doc) => Ok(Some(serde_json::from_str(doc.get_str("session")?)?)),
+        }
     }
 
-    async fn destroy_session(&self, _session: Session) -> async_session::Result {
-        todo!();
+    async fn destroy_session(&self, session: Session) -> Result {
+        let coll = self.client.database(&self.db).collection(&self.coll_name);
+        coll.delete_one(doc! { "session_id": session.id() }, None)
+            .await?;
+        Ok(())
     }
 
-    async fn clear_store(&self) -> async_session::Result {
-        todo!();
+    async fn clear_store(&self) -> Result {
+        let coll = self.client.database(&self.db).collection(&self.coll_name);
+        coll.drop(None).await?; // does this need to be followed by a create?
+        Ok(())
     }
 }
