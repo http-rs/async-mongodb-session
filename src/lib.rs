@@ -3,7 +3,12 @@
 //! # Examples
 //!
 //! ```
-//! // tbi
+//! use async_mongodb_session::*;
+//! use async_session::{Session, SessionStore};
+//!
+//! # fn main() -> async_session::Result { async_std::task::block_on(async {
+//! let store = MongodbSessionStore::connect("mongodb://127.0.0.1:27017", "db_name", "collection");
+//! # Ok(()) }) }
 //! ```
 
 #![forbid(unsafe_code, future_incompatible, rust_2018_idioms)]
@@ -26,12 +31,38 @@ pub struct MongodbSessionStore {
 
 impl MongodbSessionStore {
     /// Create a new instance of `MongodbSessionStore`.
+    /// ```rust
+    /// # fn main() -> async_session::Result { async_std::task::block_on(async {
+    /// # use async_mongodb_session::MongodbSessionStore;
+    /// let store =
+    /// MongodbSessionStore::connect("mongodb://127.0.0.1:27017", "db_name", "collection")
+    /// .await?;
+    /// # Ok(()) }) }
+    /// ```
     pub async fn connect(uri: &str, db: &str, coll_name: &str) -> mongodb::error::Result<Self> {
         let client = Client::with_uri_str(uri).await?;
         Ok(Self::from_client(client, db, coll_name))
     }
 
     /// Create a new instance of `MongodbSessionStore` from an open client.
+    /// ```rust
+    /// use mongodb::{options::ClientOptions, Client};
+    ///
+    /// # fn main() -> async_session::Result { async_std::task::block_on(async {
+    /// # use async_mongodb_session::MongodbSessionStore;
+    ///             let client_options = match ClientOptions::parse("mongodb://127.0.0.1:27017").await {
+    ///     Ok(c) => c,
+    ///     Err(e) => panic!("Client Options Failed: {}", e),
+    /// };
+
+    /// let client = match Client::with_options(client_options) {
+    ///     Ok(c) => c,
+    ///     Err(e) => panic!("Client Creation Failed: {}", e),
+    /// };
+
+    /// let store = MongodbSessionStore::from_client(client, "db_name", "collection");
+    /// # Ok(()) }) }
+    /// ```
     pub fn from_client(client: Client, db: &str, coll_name: &str) -> Self {
         Self {
             client,
