@@ -47,7 +47,7 @@ $ cargo add async-mongodb-session
 ```
 ## Test
 
-The tests rely on an running instance of mongodb.
+The tests rely on an running instance of mongodb either on your local machine or remote.
 The quickest way to get an instance up and running locally is using the following docker command:
 
 ```
