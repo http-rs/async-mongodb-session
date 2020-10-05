@@ -17,11 +17,12 @@ authors = [
 [features]
 
 [dependencies]
-# mongodb = { version = "1.0.0", default-features = false, features = ["async-std-runtime"] }
-mongodb = { git = "https://github.com/saghm/mongo-rust-driver", default-features = false, branch = "RUST-452", features = ["async-std-runtime"] }
+mongodb = { version = "1.1.1", default-features = false, features = ["async-std-runtime"] }
 async-session = "2.0.0"
 async-trait = "0.1.36"
 serde_json = "1.0.56"
 
 [dev-dependencies]
 async-std = { version = "1.6.2", features = ["attributes"] }
+rand = {version = "0.7.3"}
+lazy_static = "1"

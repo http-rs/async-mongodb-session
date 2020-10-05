@@ -45,6 +45,24 @@
 ```sh
 $ cargo add async-mongodb-session
 ```
+## Test
+
+The tests rely on an running instance of mongodb either on your local machine or remote.
+The quickest way to get an instance up and running locally is using the following docker command:
+
+```
+$ docker run -d -p 27017:27017 -v ~/data:/data/db mongo:4.2
+```
+
+The tests can then be executed with
+```
+$ cargo test
+```
+
+The default settings for the mongodb instance is set to 127.0.0.1:27017 but that can be over ridden by setting the HOST and PORT environment variables.
+```
+$ HOST=mymongo.com PORT=1234 cargo test
+```
 
 ## Safety
 This crate uses ``#![deny(unsafe_code)]`` to ensure everything is implemented in
