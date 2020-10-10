@@ -12,6 +12,7 @@ categories = []
 authors = [
     "Yoshua Wuyts <yoshuawuyts@gmail.com>",
     "Irina Shestak <shestak.irina@gmail.com>",
+    "Anton Whalley <anton@venshare.com>",
 ]
 
 [features]
@@ -21,6 +22,7 @@ mongodb = { version = "1.1.1", default-features = false, features = ["async-std-
 async-session = "2.0.0"
 async-trait = "0.1.36"
 serde_json = "1.0.56"
+chrono = "0.4.19"
 
 [dev-dependencies]
 async-std = { version = "1.6.2", features = ["attributes"] }

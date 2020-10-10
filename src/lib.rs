@@ -17,6 +17,8 @@
 
 use async_session::{Result, Session, SessionStore};
 use async_trait::async_trait;
+use chrono::Utc;
+use mongodb::bson;
 use mongodb::bson::doc;
 use mongodb::options::ReplaceOptions;
 use mongodb::Client;
@@ -77,11 +79,10 @@ impl SessionStore for MongodbSessionStore {
     async fn store_session(&self, session: Session) -> Result<Option<String>> {
         let coll = self.client.database(&self.db).collection(&self.coll_name);
 
-        // TODO: mongodb supports TTL for auto-expiry somehow, need to figure out how!
-        let value = serde_json::to_string(&session)?;
+        let value = bson::to_bson(&session)?;
         let id = session.id();
         let query = doc! { "session_id": id };
-        let replacement = doc! { "session_id": id, "session": value };
+        let replacement = doc! { "session_id": id, "session": value, "created": Utc::now() };
         let opts = ReplaceOptions::builder().upsert(true).build();
         coll.replace_one(query, replacement, Some(opts)).await?;
 
@@ -94,7 +95,9 @@ impl SessionStore for MongodbSessionStore {
         let filter = doc! { "session_id": id };
         match coll.find_one(filter, None).await? {
             None => Ok(None),
-            Some(doc) => Ok(Some(serde_json::from_str(doc.get_str("session")?)?)),
+            Some(doc) => Ok(Some(
+                bson::from_bson::<Session>(doc.get("session").unwrap().clone()).unwrap(),
+            )),
         }
     }
 
