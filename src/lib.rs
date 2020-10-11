@@ -15,9 +15,9 @@
 #![deny(missing_debug_implementations, nonstandard_style)]
 #![warn(missing_docs, missing_doc_code_examples, unreachable_pub)]
 
+use async_session::chrono::Utc;
 use async_session::{Result, Session, SessionStore};
 use async_trait::async_trait;
-use chrono::Utc;
 use mongodb::bson;
 use mongodb::bson::doc;
 use mongodb::options::ReplaceOptions;
@@ -95,9 +95,13 @@ impl SessionStore for MongodbSessionStore {
         let filter = doc! { "session_id": id };
         match coll.find_one(filter, None).await? {
             None => Ok(None),
-            Some(doc) => Ok(Some(
-                bson::from_bson::<Session>(doc.get("session").unwrap().clone()).unwrap(),
-            )),
+            Some(doc) => {
+                let bsession = match doc.get("session") {
+                    Some(v) => v.clone(),
+                    None => bson::to_bson::<Session>(&Session::new()).unwrap(),
+                };
+                Ok(Some(bson::from_bson::<Session>(bsession)?))
+            }
         }
     }
 
