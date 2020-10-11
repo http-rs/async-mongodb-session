@@ -85,4 +85,33 @@ mod tests {
             Ok(())
         })
     }
+
+    #[test]
+    fn test_check_expired() -> async_session::Result {
+        use std::time::Duration;
+        use async_std::task;
+        async_std::task::block_on(async {
+            let store =
+                MongodbSessionStore::connect(&CONNECTION_STRING, "db_name", "collection").await?;
+
+            let mut rng = rand::thread_rng();
+            let n2: u16 = rng.gen();
+            let key = format!("key-{}", n2);
+            let value = format!("value-{}", n2);
+            let mut session = Session::new();
+            session.expire_in(Duration::from_secs(1));
+            session.insert(&key, &value)?;
+
+            let cookie_value = store.store_session(session).await?.unwrap();
+
+            // mongodb runs the background task that removes expired documents runs every 60 seconds.
+            // https://docs.mongodb.com/manual/core/index-ttl/#timing-of-the-delete-operation
+            task::sleep(Duration::from_secs(60)).await;
+            let session_to_recover = store.load_session(cookie_value).await?;
+
+            assert!(&session_to_recover.is_none());
+
+            Ok(())
+        })
+    }
 }
