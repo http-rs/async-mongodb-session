@@ -19,8 +19,6 @@ authors = [
 [dependencies]
 mongodb = { version = "1.1.1", default-features = false, features = ["async-std-runtime"] }
 async-session = "2.0.0"
-async-trait = "0.1.36"
-serde_json = "1.0.56"
 
 [dev-dependencies]
 async-std = { version = "1.6.2", features = ["attributes"] }
