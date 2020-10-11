@@ -98,7 +98,7 @@ impl SessionStore for MongodbSessionStore {
             Some(doc) => {
                 let bsession = match doc.get("session") {
                     Some(v) => v.clone(),
-                    None => bson::to_bson::<Session>(&Session::new()).unwrap(),
+                    None => return Ok(None),
                 };
                 Ok(Some(bson::from_bson::<Session>(bsession)?))
             }
