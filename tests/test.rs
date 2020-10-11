@@ -63,4 +63,26 @@ mod tests {
             Ok(())
         })
     }
+
+    #[test]
+    fn test_with_expire() -> async_session::Result {
+        async_std::task::block_on(async {
+            let store =
+                MongodbSessionStore::connect(&CONNECTION_STRING, "db_name", "collection").await?;
+
+            let mut rng = rand::thread_rng();
+            let n2: u16 = rng.gen();
+            let key = format!("key-{}", n2);
+            let value = format!("value-{}", n2);
+            let mut session = Session::new();
+            session.expire_in(std::time::Duration::from_secs(5));
+            session.insert(&key, &value)?;
+
+            let cookie_value = store.store_session(session).await?.unwrap();
+            let session = store.load_session(cookie_value).await?.unwrap();
+            assert_eq!(&session.get::<String>(&key).unwrap(), &value);
+
+            Ok(())
+        })
+    }
 }
