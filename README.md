@@ -48,7 +48,7 @@ $ cargo add async-mongodb-session
 
 ## Configuration
 
-This library utilises the document [expiry feature](https://docs.mongodb.com/manual/tutorial/expire-data/#expire-documents-at-a-specific-clock-time) in mongodb to expire the session at the expiry
+This library utilises the document [expiry feature](https://docs.mongodb.com/manual/tutorial/expire-data/#expire-documents-at-a-specific-clock-time) in mongodb to expire the session at the expiry.
 
 The management of the expiry feature fits into the 12 factor [admin process definintion](https://12factor.net/admin-processes) so it's recommended to use an process outside of your web application to manage the expiry parameters.
 
