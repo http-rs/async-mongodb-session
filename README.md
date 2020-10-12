@@ -46,6 +46,11 @@
 $ cargo add async-mongodb-session
 ```
 
+## Overview
+This library allow you to utilises the document expiration feature based on a [specified number of seconds](https://docs.mongodb.com/manual/tutorial/expire-data/#expire-documents-after-a-specified-number-of-seconds) or in a [specific clock time](https://docs.mongodb.com/manual/tutorial/expire-data/#expire-documents-at-a-specific-clock-time) supported by mongodb to expire the session.
+
+The management of the expiry feature fits into the 12 factor [admin process definintion](https://12factor.net/admin-processes) so it's recommended to use an process outside of your web application to manage the expiry parameters.
+
 ## Configuration
 
 A `created` property is available on the root of the session document that so the [expiry feature](https://docs.mongodb.com/manual/tutorial/expire-data/#expire-documents-after-a-specified-number-of-seconds) can be used in the configuration.
@@ -68,11 +73,11 @@ db.coll_session.dropIndex( { "created": 1 })
 db.coll_session.createIndex( { "created": 1 } , { expireAfterSeconds: 300 } );
 ```
 
-Other way to set create the index is using  `create_created_index_for_global_expiry` passing the amount of seconds to expiry after the session.
+Other way to set create the index is using  `index_on_created` passing the amount of seconds to expiry after the session.
 
 Also, an `expireAt` property is available on the root of the session document IFF the session expire is set. Note that  [async-session doesn't set by default](https://github.com/http-rs/async-session/blob/main/src/session.rs#L98).
 
-To enable this [expiry feature](https://docs.mongodb.com/manual/tutorial/expire-data/#expire-documents-at-a-specific-clock-time) at `index` for `expireAt` should be created calling `create_expire_at_index` function or with this script ( following the above example )
+To enable this [expiry feature](https://docs.mongodb.com/manual/tutorial/expire-data/#expire-documents-at-a-specific-clock-time) at `index` for `expireAt` should be created calling `index_on_expiry_at` function or with this script ( following the above example )
 
 ```
 use db_name;
