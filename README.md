@@ -48,13 +48,36 @@ $ cargo add async-mongodb-session
 
 ## Configuration
 
-This library utilises the document [expiry feature](https://docs.mongodb.com/manual/tutorial/expire-data/#expire-documents-at-a-specific-clock-time) in mongodb to expire the session at the expiry.
+A `created` property is available on the root of the session document that so the [expiry feature](https://docs.mongodb.com/manual/tutorial/expire-data/#expire-documents-after-a-specified-number-of-seconds) can be used in the configuration.
 
-The management of the expiry feature fits into the 12 factor [admin process definintion](https://12factor.net/admin-processes) so it's recommended to use an process outside of your web application to manage the expiry parameters.
+If your application code to create a session store is something like:
+```
+let store = MongodbSessionStore::connect("mongodb://127.0.0.1:27017", "db_name", "coll_session").await?;
+```
 
-A `expireAt` property is available on the root of the session document IFF the session expire is set. Note that  [async-session doesn't set by default](https://github.com/http-rs/async-session/blob/main/src/session.rs#L98).
+Then the script to create the expiry would be:
+```
+use db_name;
+db.coll_session.createIndex( { "created": 1 } , { expireAfterSeconds: 300 } );
+```
 
-To enable this [expiry feature](https://docs.mongodb.com/manual/tutorial/expire-data/#expire-documents-at-a-specific-clock-time) at `index` for `expireAt` is created when the client `connet`. Allowing then to use this property from the session to set the expiration of the document.
+If you wish to redefine the session duration then the index must be dropped first using:
+```
+use db_name;
+db.coll_session.dropIndex( { "created": 1 })
+db.coll_session.createIndex( { "created": 1 } , { expireAfterSeconds: 300 } );
+```
+
+Other way to set create the index is using  `create_created_index_for_global_expiry` passing the amount of seconds to expiry after the session.
+
+Also, an `expireAt` property is available on the root of the session document IFF the session expire is set. Note that  [async-session doesn't set by default](https://github.com/http-rs/async-session/blob/main/src/session.rs#L98).
+
+To enable this [expiry feature](https://docs.mongodb.com/manual/tutorial/expire-data/#expire-documents-at-a-specific-clock-time) at `index` for `expireAt` should be created calling `create_expire_at_index` function or with this script ( following the above example )
+
+```
+use db_name;
+db.coll_session.createIndex( { "expireAt": 1 } , { expireAfterSeconds: 0 } );
+```
 
 ## Test
 

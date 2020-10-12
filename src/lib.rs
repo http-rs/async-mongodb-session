@@ -43,23 +43,6 @@ impl MongodbSessionStore {
     /// ```
     pub async fn connect(uri: &str, db: &str, coll_name: &str) -> mongodb::error::Result<Self> {
         let client = Client::with_uri_str(uri).await?;
-        let create_index = doc! {
-            "createIndexes": coll_name,
-            "indexes": [
-                {
-                    "key" : {"expireAt": 1 },
-                    "name": "session_expire_at_index",
-                    "expireAfterSeconds": 0,
-                }
-            ]
-        };
-        client
-            .database(db)
-            .run_command(
-                create_index,
-                SelectionCriteria::ReadPreference(mongodb::options::ReadPreference::Primary),
-            )
-            .await?;
         Ok(Self::from_client(client, db, coll_name))
     }
 
@@ -88,6 +71,76 @@ impl MongodbSessionStore {
             db: db.to_string(),
             coll_name: coll_name.to_string(),
         }
+    }
+
+    /// Create a new index for the `created` property and set the expiry ttl (in secods).
+    /// The session will expire when the number of seconds in the expireAfterSeconds field has passed
+    /// since the time specified in its created field.
+    /// https://docs.mongodb.com/manual/tutorial/expire-data/#expire-documents-after-a-specified-number-of-seconds
+    /// ```rust
+    /// # fn main() -> async_session::Result { async_std::task::block_on(async {
+    /// # use async_mongodb_session::MongodbSessionStore;
+    /// let store =
+    /// MongodbSessionStore::connect("mongodb://127.0.0.1:27017", "db_name", "collection")
+    /// .await?;
+    /// store.create_created_index_for_global_expiry(300).await?;
+    /// # Ok(()) }) }
+    /// ```
+    pub async fn create_created_index_for_global_expiry(
+        &self,
+        expire_after_seconds: u32,
+    ) -> Result {
+        let create_index = doc! {
+            "createIndexes": &self.coll_name,
+            "indexes": [
+                {
+                    "key" : { "created": 1 },
+                    "name": "session_expire_after_created_index",
+                    "expireAfterSeconds": expire_after_seconds,
+                }
+            ]
+        };
+        self.client
+            .database(&self.db)
+            .run_command(
+                create_index,
+                SelectionCriteria::ReadPreference(mongodb::options::ReadPreference::Primary),
+            )
+            .await?;
+        Ok(())
+    }
+
+    /// Create a new index for the `expireAt` property, allowing to expire sessions at a specific clock time.
+    /// If the `expireAt` date field contains a date in the past, mongodb considers the document expired and will be deleted.
+    /// https://docs.mongodb.com/manual/tutorial/expire-data/#expire-documents-at-a-specific-clock-time
+    /// ```rust
+    /// # fn main() -> async_session::Result { async_std::task::block_on(async {
+    /// # use async_mongodb_session::MongodbSessionStore;
+    /// let store =
+    /// MongodbSessionStore::connect("mongodb://127.0.0.1:27017", "db_name", "collection")
+    /// .await?;
+    /// store.create_expire_at_index().await?;
+    /// # Ok(()) }) }
+    /// ```
+    pub async fn create_expire_at_index(&self) -> Result {
+        let create_index = doc! {
+            "createIndexes": &self.coll_name,
+            "indexes": [
+                {
+                    "key" : { "expireAt": 1 },
+                    "name": "session_expire_at_index",
+                    "expireAfterSeconds": 0,
+                }
+            ]
+        };
+        self.client
+            .database(&self.db)
+            .run_command(
+                create_index,
+                SelectionCriteria::ReadPreference(mongodb::options::ReadPreference::Primary),
+            )
+            .await?;
+        Ok(())
     }
 }
 

@@ -70,6 +70,8 @@ mod tests {
             let store =
                 MongodbSessionStore::connect(&CONNECTION_STRING, "db_name", "collection").await?;
 
+            store.create_expire_at_index().await?;
+
             let mut rng = rand::thread_rng();
             let n2: u16 = rng.gen();
             let key = format!("key-{}", n2);
@@ -93,6 +95,8 @@ mod tests {
         async_std::task::block_on(async {
             let store =
                 MongodbSessionStore::connect(&CONNECTION_STRING, "db_name", "collection").await?;
+
+            store.create_expire_at_index().await?;
 
             let mut rng = rand::thread_rng();
             let n2: u16 = rng.gen();
