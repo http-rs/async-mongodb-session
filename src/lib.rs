@@ -83,10 +83,10 @@ impl MongodbSessionStore {
     /// let store =
     /// MongodbSessionStore::connect("mongodb://127.0.0.1:27017", "db_name", "collection")
     /// .await?;
-    /// store.create_created_index_for_global_expiry(300).await?;
+    /// store.index_on_created(300).await?;
     /// # Ok(()) }) }
     /// ```
-    pub async fn create_created_index_for_global_expiry(
+    pub async fn index_on_created(
         &self,
         expire_after_seconds: u32,
     ) -> Result {
@@ -119,10 +119,10 @@ impl MongodbSessionStore {
     /// let store =
     /// MongodbSessionStore::connect("mongodb://127.0.0.1:27017", "db_name", "collection")
     /// .await?;
-    /// store.create_expire_at_index().await?;
+    /// store.index_on_expiry_at().await?;
     /// # Ok(()) }) }
     /// ```
-    pub async fn create_expire_at_index(&self) -> Result {
+    pub async fn index_on_expiry_at(&self) -> Result {
         let create_index = doc! {
             "createIndexes": &self.coll_name,
             "indexes": [
