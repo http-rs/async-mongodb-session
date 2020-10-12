@@ -88,8 +88,8 @@ mod tests {
 
     #[test]
     fn test_check_expired() -> async_session::Result {
-        use std::time::Duration;
         use async_std::task;
+        use std::time::Duration;
         async_std::task::block_on(async {
             let store =
                 MongodbSessionStore::connect(&CONNECTION_STRING, "db_name", "collection").await?;
