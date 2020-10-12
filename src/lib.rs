@@ -20,7 +20,7 @@ use async_session::{Result, Session, SessionStore};
 use async_trait::async_trait;
 use mongodb::bson;
 use mongodb::bson::doc;
-use mongodb::options::{ReplaceOptions,SelectionCriteria};
+use mongodb::options::{ReplaceOptions, SelectionCriteria};
 use mongodb::Client;
 
 /// A MongoDB session store.
@@ -53,7 +53,13 @@ impl MongodbSessionStore {
                 }
             ]
         };
-        client.database(db).run_command(create_index, SelectionCriteria::ReadPreference( mongodb::options::ReadPreference::Primary)).await?;
+        client
+            .database(db)
+            .run_command(
+                create_index,
+                SelectionCriteria::ReadPreference(mongodb::options::ReadPreference::Primary),
+            )
+            .await?;
         Ok(Self::from_client(client, db, coll_name))
     }
 
@@ -94,8 +100,12 @@ impl SessionStore for MongodbSessionStore {
         let id = session.id();
         let query = doc! { "session_id": id };
         let replacement = match session.expiry() {
-            None => { doc! { "session_id": id, "session": value,"created": Utc::now() } },
-            Some( expire_at ) => { doc! { "session_id": id, "session": value, "expireAt": expire_at, "created": Utc::now() } }
+            None => {
+                doc! { "session_id": id, "session": value,"created": Utc::now() }
+            }
+            Some(expire_at) => {
+                doc! { "session_id": id, "session": value, "expireAt": expire_at, "created": Utc::now() }
+            }
         };
 
         let opts = ReplaceOptions::builder().upsert(true).build();
