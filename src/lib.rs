@@ -86,10 +86,7 @@ impl MongodbSessionStore {
     /// store.index_on_created(300).await?;
     /// # Ok(()) }) }
     /// ```
-    pub async fn index_on_created(
-        &self,
-        expire_after_seconds: u32,
-    ) -> Result {
+    pub async fn index_on_created(&self, expire_after_seconds: u32) -> Result {
         let create_index = doc! {
             "createIndexes": &self.coll_name,
             "indexes": [
