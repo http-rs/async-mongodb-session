@@ -49,6 +49,10 @@ $ cargo add async-mongodb-session
 ## Overview
 This library allow you to utilises the document expiration feature based on a [specified number of seconds](https://docs.mongodb.com/manual/tutorial/expire-data/#expire-documents-after-a-specified-number-of-seconds) or in a [specific clock time](https://docs.mongodb.com/manual/tutorial/expire-data/#expire-documents-at-a-specific-clock-time) supported by mongodb to expire the session.
 
+The specified number of seconds approach is designed to enable the session time out to be managed at the mongodb layer. This approach provides a globally consistent session timeout across multiple processes but has the downside that all services using the same session collection must use the same timeout value.
+
+The specific clock time clock time approach is where you require more flexibility on your session timeouts such as a different session timeout per running service or you would prefer to manage the session time out at the process level. This is more flexible but might lead to some perceived inconsistency in session timeout depending on your upgrade/rollout strategy.
+
 The management of the expiry feature fits into the 12 factor [admin process definintion](https://12factor.net/admin-processes) so it's recommended to use an process outside of your web application to manage the expiry parameters.
 
 ## Configuration
