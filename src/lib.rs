@@ -15,7 +15,7 @@
 #![deny(missing_debug_implementations, nonstandard_style)]
 #![warn(missing_docs, missing_doc_code_examples, unreachable_pub)]
 
-use async_session::chrono::Utc;
+use async_session::chrono::{Utc, Duration};
 use async_session::{Result, Session, SessionStore};
 use async_trait::async_trait;
 use mongodb::bson;
@@ -73,6 +73,36 @@ impl MongodbSessionStore {
         }
     }
 
+    ///
+    ///
+    pub async fn initialize(&self) -> Result {
+        self.index_on_expiry_at().await?;
+        Ok(())
+    }
+
+    ///
+    ///
+    async fn create_expire_index(&self, field_name: &str, expire_after_seconds: u32) -> Result {
+        let create_index = doc! {
+            "createIndexes": &self.coll_name,
+            "indexes": [
+                {
+                    "key" : { field_name: 1 },
+                    "name": format!("session_expire_index_{}", field_name),
+                    "expireAfterSeconds": expire_after_seconds,
+                }
+            ]
+        };
+        self.client
+            .database(&self.db)
+            .run_command(
+                create_index,
+                SelectionCriteria::ReadPreference(mongodb::options::ReadPreference::Primary),
+            )
+            .await?;
+        Ok(())
+    }
+
     /// Create a new index for the `created` property and set the expiry ttl (in secods).
     /// The session will expire when the number of seconds in the expireAfterSeconds field has passed
     /// since the time specified in its created field.
@@ -87,23 +117,7 @@ impl MongodbSessionStore {
     /// # Ok(()) }) }
     /// ```
     pub async fn index_on_created(&self, expire_after_seconds: u32) -> Result {
-        let create_index = doc! {
-            "createIndexes": &self.coll_name,
-            "indexes": [
-                {
-                    "key" : { "created": 1 },
-                    "name": "session_expire_after_created_index",
-                    "expireAfterSeconds": expire_after_seconds,
-                }
-            ]
-        };
-        self.client
-            .database(&self.db)
-            .run_command(
-                create_index,
-                SelectionCriteria::ReadPreference(mongodb::options::ReadPreference::Primary),
-            )
-            .await?;
+        self.create_expire_index("created", expire_after_seconds).await?;
         Ok(())
     }
 
@@ -120,23 +134,7 @@ impl MongodbSessionStore {
     /// # Ok(()) }) }
     /// ```
     pub async fn index_on_expiry_at(&self) -> Result {
-        let create_index = doc! {
-            "createIndexes": &self.coll_name,
-            "indexes": [
-                {
-                    "key" : { "expireAt": 1 },
-                    "name": "session_expire_at_index",
-                    "expireAfterSeconds": 0,
-                }
-            ]
-        };
-        self.client
-            .database(&self.db)
-            .run_command(
-                create_index,
-                SelectionCriteria::ReadPreference(mongodb::options::ReadPreference::Primary),
-            )
-            .await?;
+        self.create_expire_index("expireAt", 0).await?;
         Ok(())
     }
 }
@@ -149,14 +147,12 @@ impl SessionStore for MongodbSessionStore {
         let value = bson::to_bson(&session)?;
         let id = session.id();
         let query = doc! { "session_id": id };
-        let replacement = match session.expiry() {
-            None => {
-                doc! { "session_id": id, "session": value,"created": Utc::now() }
-            }
-            Some(expire_at) => {
-                doc! { "session_id": id, "session": value, "expireAt": expire_at, "created": Utc::now() }
-            }
+        let expire_at = match session.expiry() {
+            None => { Utc::now() + Duration::from_std(std::time::Duration::from_secs(1220)).unwrap() },
+
+            Some(expiry) =>  *{ expiry }
         };
+        let replacement = doc! { "session_id": id, "session": value, "expireAt": expire_at, "created": Utc::now() };
 
         let opts = ReplaceOptions::builder().upsert(true).build();
         coll.replace_one(query, replacement, Some(opts)).await?;
@@ -189,7 +185,8 @@ impl SessionStore for MongodbSessionStore {
 
     async fn clear_store(&self) -> Result {
         let coll = self.client.database(&self.db).collection(&self.coll_name);
-        coll.drop(None).await?; // does this need to be followed by a create?
+        coll.drop(None).await?;
+        self.initialize().await?;
         Ok(())
     }
 }

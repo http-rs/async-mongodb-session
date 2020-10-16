@@ -70,7 +70,7 @@ mod tests {
             let store =
                 MongodbSessionStore::connect(&CONNECTION_STRING, "db_name", "collection").await?;
 
-            store.index_on_expiry_at().await?;
+            store.initialize().await?;
 
             let mut rng = rand::thread_rng();
             let n2: u16 = rng.gen();
@@ -96,7 +96,7 @@ mod tests {
             let store =
                 MongodbSessionStore::connect(&CONNECTION_STRING, "db_name", "collection").await?;
 
-            store.index_on_expiry_at().await?;
+            store.initialize().await?;
 
             let mut rng = rand::thread_rng();
             let n2: u16 = rng.gen();
