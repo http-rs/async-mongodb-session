@@ -15,7 +15,7 @@
 #![deny(missing_debug_implementations, nonstandard_style)]
 #![warn(missing_docs, missing_doc_code_examples, unreachable_pub)]
 
-use async_session::chrono::{Utc, Duration};
+use async_session::chrono::{Duration, Utc};
 use async_session::{Result, Session, SessionStore};
 use async_trait::async_trait;
 use mongodb::bson;
@@ -117,7 +117,8 @@ impl MongodbSessionStore {
     /// # Ok(()) }) }
     /// ```
     pub async fn index_on_created(&self, expire_after_seconds: u32) -> Result {
-        self.create_expire_index("created", expire_after_seconds).await?;
+        self.create_expire_index("created", expire_after_seconds)
+            .await?;
         Ok(())
     }
 
@@ -148,9 +149,9 @@ impl SessionStore for MongodbSessionStore {
         let id = session.id();
         let query = doc! { "session_id": id };
         let expire_at = match session.expiry() {
-            None => { Utc::now() + Duration::from_std(std::time::Duration::from_secs(1220)).unwrap() },
+            None => Utc::now() + Duration::from_std(std::time::Duration::from_secs(1200)).unwrap(),
 
-            Some(expiry) =>  *{ expiry }
+            Some(expiry) => *{ expiry },
         };
         let replacement = doc! { "session_id": id, "session": value, "expireAt": expire_at, "created": Utc::now() };
 
