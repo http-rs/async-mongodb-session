@@ -47,7 +47,60 @@ $ cargo add async-mongodb-session
 ```
 
 ## Overview
-This library allow you to utilises the document expiration feature based on a [specified number of seconds](https://docs.mongodb.com/manual/tutorial/expire-data/#expire-documents-after-a-specified-number-of-seconds) or in a [specific clock time](https://docs.mongodb.com/manual/tutorial/expire-data/#expire-documents-at-a-specific-clock-time) supported by mongodb to expire the session.
+By default this library utilises the document expiration feature based on [specific clock time](https://docs.mongodb.com/manual/tutorial/expire-data/#expire-documents-at-a-specific-clock-time) supported by mongodb to auto-expire the session.
+
+For other option to offloading the session expiration to the mongodb layer check the [Advance options](#advance-options).
+
+## Example with tide
+Create an HTTP server that keep track of user visits in the session.
+
+```rust
+#[async_std::main]
+async fn main() -> Result<(), std::io::Error> {
+    tide::log::start();
+    let mut app = tide::new();
+
+    let store = MongodbSessionStore::new("mongodb://127.0.0.1:27017", "db_name", "collection").await
+        .expect("Coldn't connect to the mongodb instance");
+    store.initialize().await.expect("Couldn't initialize the session store");
+
+    app.with(tide::sessions::SessionMiddleware::new(
+        store,
+        std::env::var("TIDE_SECRET")
+            .expect(
+                "Please provide a TIDE_SECRET value of at \
+                      least 32 bytes in order to run this example",
+            )
+            .as_bytes(),
+    ));
+
+    app.with(tide::utils::Before(
+        |mut request: tide::Request<()>| async move {
+            let session = request.session_mut();
+            let visits: usize = session.get("visits").unwrap_or_default();
+            session.insert("visits", visits + 1).unwrap();
+            request
+        },
+    ));
+
+    app.at("/").get(|req: tide::Request<()>| async move {
+        let visits: usize = req.session().get("visits").unwrap();
+        Ok(format!("you have visited this website {} times", visits))
+    });
+
+    app.at("/reset")
+        .get(|mut req: tide::Request<()>| async move {
+            req.session_mut().destroy();
+            Ok(tide::Redirect::new("/"))
+        });
+
+    app.listen("127.0.0.1:8080").await?;
+
+    Ok(())
+}
+```
+## Advance options
+a [specified number of seconds](https://docs.mongodb.com/manual/tutorial/expire-data/#expire-documents-after-a-specified-number-of-seconds) or in a
 
 The specified number of seconds approach is designed to enable the session time out to be managed at the mongodb layer. This approach provides a globally consistent session timeout across multiple processes but has the downside that all services using the same session collection must use the same timeout value.
 
@@ -55,7 +108,7 @@ The specific clock time clock time approach is where you require more flexibilit
 
 The management of the expiry feature fits into the 12 factor [admin process definintion](https://12factor.net/admin-processes) so it's recommended to use an process outside of your web application to manage the expiry parameters.
 
-## Configuration
+## Manual configuration
 
 A `created` property is available on the root of the session document that so the [expiry feature](https://docs.mongodb.com/manual/tutorial/expire-data/#expire-documents-after-a-specified-number-of-seconds) can be used in the configuration.
 
