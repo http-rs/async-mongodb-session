@@ -7,7 +7,7 @@
 //! use async_session::{Session, SessionStore};
 //!
 //! # fn main() -> async_session::Result { async_std::task::block_on(async {
-//! let store = MongodbSessionStore::connect("mongodb://127.0.0.1:27017", "db_name", "collection");
+//! let store = MongodbSessionStore::new("mongodb://127.0.0.1:27017", "db_name", "collection");
 //! # Ok(()) }) }
 //! ```
 
@@ -29,19 +29,20 @@ pub struct MongodbSessionStore {
     client: mongodb::Client,
     db: String,
     coll_name: String,
+    ttl: usize,
 }
 
 impl MongodbSessionStore {
-    /// Create a new instance of `MongodbSessionStore`.
+    /// Create a new instance of `MongodbSessionStore` after stablish the connection to monngodb.
     /// ```rust
     /// # fn main() -> async_session::Result { async_std::task::block_on(async {
     /// # use async_mongodb_session::MongodbSessionStore;
     /// let store =
-    /// MongodbSessionStore::connect("mongodb://127.0.0.1:27017", "db_name", "collection")
+    /// MongodbSessionStore::new("mongodb://127.0.0.1:27017", "db_name", "collection")
     /// .await?;
     /// # Ok(()) }) }
     /// ```
-    pub async fn connect(uri: &str, db: &str, coll_name: &str) -> mongodb::error::Result<Self> {
+    pub async fn new(uri: &str, db: &str, coll_name: &str) -> mongodb::error::Result<Self> {
         let client = Client::with_uri_str(uri).await?;
         Ok(Self::from_client(client, db, coll_name))
     }
@@ -70,18 +71,60 @@ impl MongodbSessionStore {
             client,
             db: db.to_string(),
             coll_name: coll_name.to_string(),
+            ttl: 1200, // 20 mins by default.
         }
     }
 
-    ///
-    ///
+    /// Initialize the default expiration mechanism, based on the document expiration
+    /// that mongodb provides https://docs.mongodb.com/manual/tutorial/expire-data/#expire-documents-at-a-specific-clock-time.
+    /// The default ttl applyed to sessions without expiry is 20 minutes.
+    /// If the `expireAt` date field contains a date in the past, mongodb considers the document expired and will be deleted.
+    /// Note: mongodb runs the expiration logic every 60 seconds.    
+    /// ```rust
+    /// # fn main() -> async_session::Result { async_std::task::block_on(async {
+    /// # use async_mongodb_session::MongodbSessionStore;
+    /// let store =
+    /// MongodbSessionStore::new("mongodb://127.0.0.1:27017", "db_name", "collection")
+    /// .await?;
+    /// store.initialize().await?;
+    /// # Ok(()) }) }
+    /// ```
     pub async fn initialize(&self) -> Result {
-        self.index_on_expiry_at().await?;
+        &self.index_on_expiry_at().await?;
         Ok(())
     }
 
-    ///
-    ///
+    /// Get the default ttl value in seconds.
+    /// ```rust
+    /// # fn main() -> async_session::Result { async_std::task::block_on(async {
+    /// # use async_mongodb_session::MongodbSessionStore;
+    /// let store =
+    /// MongodbSessionStore::new("mongodb://127.0.0.1:27017", "db_name", "collection")
+    /// .await?;
+    /// let ttl = store.ttl();
+    /// # Ok(()) }) }
+    /// ```    
+    pub fn ttl(&self) -> usize {
+        self.ttl
+    }
+
+    /// Set the default ttl value in seconds.
+    /// ```rust
+    /// # fn main() -> async_session::Result { async_std::task::block_on(async {
+    /// # use async_mongodb_session::MongodbSessionStore;
+    /// let mut store =
+    /// MongodbSessionStore::new("mongodb://127.0.0.1:27017", "db_name", "collection")
+    /// .await?;
+    /// store.set_ttl(300);
+    /// # Ok(()) }) }
+    /// ```    
+    pub fn set_ttl(&mut self, ttl: usize) {
+        self.ttl = ttl;
+    }
+
+    /// private associated function
+    /// Create an `expire after seconds` index in the provided field.
+    /// Testing is covered by initialize test.
     async fn create_expire_index(&self, field_name: &str, expire_after_seconds: u32) -> Result {
         let create_index = doc! {
             "createIndexes": &self.coll_name,
@@ -111,7 +154,7 @@ impl MongodbSessionStore {
     /// # fn main() -> async_session::Result { async_std::task::block_on(async {
     /// # use async_mongodb_session::MongodbSessionStore;
     /// let store =
-    /// MongodbSessionStore::connect("mongodb://127.0.0.1:27017", "db_name", "collection")
+    /// MongodbSessionStore::new("mongodb://127.0.0.1:27017", "db_name", "collection")
     /// .await?;
     /// store.index_on_created(300).await?;
     /// # Ok(()) }) }
@@ -129,7 +172,7 @@ impl MongodbSessionStore {
     /// # fn main() -> async_session::Result { async_std::task::block_on(async {
     /// # use async_mongodb_session::MongodbSessionStore;
     /// let store =
-    /// MongodbSessionStore::connect("mongodb://127.0.0.1:27017", "db_name", "collection")
+    /// MongodbSessionStore::new("mongodb://127.0.0.1:27017", "db_name", "collection")
     /// .await?;
     /// store.index_on_expiry_at().await?;
     /// # Ok(()) }) }

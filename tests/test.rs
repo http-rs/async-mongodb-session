@@ -44,10 +44,10 @@ mod tests {
     }
 
     #[test]
-    fn test_connect() -> async_session::Result {
+    fn test_new() -> async_session::Result {
         async_std::task::block_on(async {
             let store =
-                MongodbSessionStore::connect(&CONNECTION_STRING, "db_name", "collection").await?;
+                MongodbSessionStore::new(&CONNECTION_STRING, "db_name", "collection").await?;
 
             let mut rng = rand::thread_rng();
             let n2: u16 = rng.gen();
@@ -68,7 +68,7 @@ mod tests {
     fn test_with_expire() -> async_session::Result {
         async_std::task::block_on(async {
             let store =
-                MongodbSessionStore::connect(&CONNECTION_STRING, "db_name", "collection").await?;
+                MongodbSessionStore::new(&CONNECTION_STRING, "db_name", "collection").await?;
 
             store.initialize().await?;
 
@@ -94,7 +94,7 @@ mod tests {
         use std::time::Duration;
         async_std::task::block_on(async {
             let store =
-                MongodbSessionStore::connect(&CONNECTION_STRING, "db_name", "collection").await?;
+                MongodbSessionStore::new(&CONNECTION_STRING, "db_name", "collection").await?;
 
             store.initialize().await?;
 
