@@ -79,7 +79,7 @@ impl MongodbSessionStore {
     /// that mongodb provides https://docs.mongodb.com/manual/tutorial/expire-data/#expire-documents-at-a-specific-clock-time.
     /// The default ttl applyed to sessions without expiry is 20 minutes.
     /// If the `expireAt` date field contains a date in the past, mongodb considers the document expired and will be deleted.
-    /// Note: mongodb runs the expiration logic every 60 seconds.    
+    /// Note: mongodb runs the expiration logic every 60 seconds.
     /// ```rust
     /// # fn main() -> async_session::Result { async_std::task::block_on(async {
     /// # use async_mongodb_session::MongodbSessionStore;
@@ -103,7 +103,7 @@ impl MongodbSessionStore {
     /// .await?;
     /// let ttl = store.ttl();
     /// # Ok(()) }) }
-    /// ```    
+    /// ```
     pub fn ttl(&self) -> usize {
         self.ttl
     }
@@ -117,7 +117,7 @@ impl MongodbSessionStore {
     /// .await?;
     /// store.set_ttl(300);
     /// # Ok(()) }) }
-    /// ```    
+    /// ```
     pub fn set_ttl(&mut self, ttl: usize) {
         self.ttl = ttl;
     }
