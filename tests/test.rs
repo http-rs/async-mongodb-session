@@ -44,10 +44,10 @@ mod tests {
     }
 
     #[test]
-    fn test_connect() -> async_session::Result {
+    fn test_new() -> async_session::Result {
         async_std::task::block_on(async {
             let store =
-                MongodbSessionStore::connect(&CONNECTION_STRING, "db_name", "collection").await?;
+                MongodbSessionStore::new(&CONNECTION_STRING, "db_name", "collection").await?;
 
             let mut rng = rand::thread_rng();
             let n2: u16 = rng.gen();
@@ -59,6 +59,61 @@ mod tests {
             let cookie_value = store.store_session(session).await?.unwrap();
             let session = store.load_session(cookie_value).await?.unwrap();
             assert_eq!(&session.get::<String>(&key).unwrap(), &value);
+
+            Ok(())
+        })
+    }
+
+    #[test]
+    fn test_with_expire() -> async_session::Result {
+        async_std::task::block_on(async {
+            let store =
+                MongodbSessionStore::new(&CONNECTION_STRING, "db_name", "collection").await?;
+
+            store.initialize().await?;
+
+            let mut rng = rand::thread_rng();
+            let n2: u16 = rng.gen();
+            let key = format!("key-{}", n2);
+            let value = format!("value-{}", n2);
+            let mut session = Session::new();
+            session.expire_in(std::time::Duration::from_secs(5));
+            session.insert(&key, &value)?;
+
+            let cookie_value = store.store_session(session).await?.unwrap();
+            let session = store.load_session(cookie_value).await?.unwrap();
+            assert_eq!(&session.get::<String>(&key).unwrap(), &value);
+
+            Ok(())
+        })
+    }
+
+    #[test]
+    fn test_check_expired() -> async_session::Result {
+        use async_std::task;
+        use std::time::Duration;
+        async_std::task::block_on(async {
+            let store =
+                MongodbSessionStore::new(&CONNECTION_STRING, "db_name", "collection").await?;
+
+            store.initialize().await?;
+
+            let mut rng = rand::thread_rng();
+            let n2: u16 = rng.gen();
+            let key = format!("key-{}", n2);
+            let value = format!("value-{}", n2);
+            let mut session = Session::new();
+            session.expire_in(Duration::from_secs(1));
+            session.insert(&key, &value)?;
+
+            let cookie_value = store.store_session(session).await?.unwrap();
+
+            // mongodb runs the background task that removes expired documents runs every 60 seconds.
+            // https://docs.mongodb.com/manual/core/index-ttl/#timing-of-the-delete-operation
+            task::sleep(Duration::from_secs(60)).await;
+            let session_to_recover = store.load_session(cookie_value).await?;
+
+            assert!(&session_to_recover.is_none());
 
             Ok(())
         })
