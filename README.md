@@ -56,16 +56,12 @@ Create an HTTP server that keep track of user visits in the session.
 
 ```rust
 #[async_std::main]
-async fn main() -> Result<(), std::io::Error> {
+async fn main() -> tide::Result<()> {
     tide::log::start();
     let mut app = tide::new();
 
-    let store = MongodbSessionStore::new("mongodb://127.0.0.1:27017", "db_name", "collection").await
-        .expect("Coldn't connect to the mongodb instance");
-    store.initialize().await.expect("Couldn't initialize the session store");
-
     app.with(tide::sessions::SessionMiddleware::new(
-        store,
+        MongodbSessionStore::new("mongodb://127.0.0.1:27017", "db_name", "collection").await?,
         std::env::var("TIDE_SECRET")
             .expect(
                 "Please provide a TIDE_SECRET value of at \

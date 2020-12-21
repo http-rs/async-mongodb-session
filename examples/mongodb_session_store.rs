@@ -7,12 +7,9 @@ use async_mongodb_session::MongodbSessionStore;
 async fn main() -> tide::Result<()> {
     tide::log::start();
     let mut app = tide::new();
-    let store =
-        MongodbSessionStore::new("mongodb://127.0.0.1:27017", "db_name", "collection").await?;
-    store.initialize().await?;
 
     app.with(tide::sessions::SessionMiddleware::new(
-        store,
+        MongodbSessionStore::new("mongodb://127.0.0.1:27017", "db_name", "collection").await?,
         std::env::var("TIDE_SECRET")
             .expect(
                 "Please provide a TIDE_SECRET value of at \
