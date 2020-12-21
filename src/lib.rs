@@ -42,13 +42,10 @@ impl MongodbSessionStore {
     /// .await?;
     /// # Ok(()) }) }
     /// ```
-    pub async fn new(uri: &str, db: &str, coll_name: &str) -> Result<Self> {
-        //mongodb::error::Result<Self> {
-        let client = Client::with_uri_str(uri)
-            .await
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.labels().join(" ")))?;
+    pub async fn new(uri: &str, db: &str, coll_name: &str) -> mongodb::error::Result<Self> {
+        let client = Client::with_uri_str(uri).await?;
         let middleware = Self::from_client(client, db, coll_name);
-        middleware.index_on_expiry_at().await?;
+        middleware.create_expire_index("expireAt", 0).await?;
         Ok(middleware)
     }
 
@@ -130,7 +127,11 @@ impl MongodbSessionStore {
     /// private associated function
     /// Create an `expire after seconds` index in the provided field.
     /// Testing is covered by initialize test.
-    async fn create_expire_index(&self, field_name: &str, expire_after_seconds: u32) -> Result {
+    async fn create_expire_index(
+        &self,
+        field_name: &str,
+        expire_after_seconds: u32,
+    ) -> mongodb::error::Result<()> {
         let create_index = doc! {
             "createIndexes": &self.coll_name,
             "indexes": [
