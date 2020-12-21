@@ -42,8 +42,11 @@ impl MongodbSessionStore {
     /// .await?;
     /// # Ok(()) }) }
     /// ```
-    pub async fn new(uri: &str, db: &str, coll_name: &str) -> Result<Self> { //mongodb::error::Result<Self> {
-        let client = Client::with_uri_str(uri).await.map_err(|e | { std::io::Error::new( std::io::ErrorKind::Other, e.labels().join(" ") ) })?;
+    pub async fn new(uri: &str, db: &str, coll_name: &str) -> Result<Self> {
+        //mongodb::error::Result<Self> {
+        let client = Client::with_uri_str(uri)
+            .await
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.labels().join(" ")))?;
         let middleware = Self::from_client(client, db, coll_name);
         middleware.index_on_expiry_at().await?;
         Ok(middleware)
