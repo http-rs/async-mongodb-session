@@ -18,7 +18,7 @@
 use async_session::chrono::{Duration, Utc};
 use async_session::{async_trait, Result, Session, SessionStore};
 use mongodb::bson;
-use mongodb::bson::doc;
+use mongodb::bson::{doc, Bson};
 use mongodb::options::{ReplaceOptions, SelectionCriteria};
 use mongodb::Client;
 
@@ -28,7 +28,6 @@ pub struct MongodbSessionStore {
     client: mongodb::Client,
     db: String,
     coll_name: String,
-    ttl: usize,
 }
 
 impl MongodbSessionStore {
@@ -72,7 +71,6 @@ impl MongodbSessionStore {
             client,
             db: db.to_string(),
             coll_name: coll_name.to_string(),
-            ttl: 1200, // 20 mins by default.
         }
     }
 
@@ -93,34 +91,6 @@ impl MongodbSessionStore {
     pub async fn initialize(&self) -> Result {
         &self.index_on_expiry_at().await?;
         Ok(())
-    }
-
-    /// Get the default ttl value in seconds.
-    /// ```rust
-    /// # fn main() -> async_session::Result { async_std::task::block_on(async {
-    /// # use async_mongodb_session::MongodbSessionStore;
-    /// let store =
-    /// MongodbSessionStore::new("mongodb://127.0.0.1:27017", "db_name", "collection")
-    /// .await?;
-    /// let ttl = store.ttl();
-    /// # Ok(()) }) }
-    /// ```
-    pub fn ttl(&self) -> usize {
-        self.ttl
-    }
-
-    /// Set the default ttl value in seconds.
-    /// ```rust
-    /// # fn main() -> async_session::Result { async_std::task::block_on(async {
-    /// # use async_mongodb_session::MongodbSessionStore;
-    /// let mut store =
-    /// MongodbSessionStore::new("mongodb://127.0.0.1:27017", "db_name", "collection")
-    /// .await?;
-    /// store.set_ttl(300);
-    /// # Ok(()) }) }
-    /// ```
-    pub fn set_ttl(&mut self, ttl: usize) {
-        self.ttl = ttl;
     }
 
     /// private associated function
@@ -147,25 +117,6 @@ impl MongodbSessionStore {
                 create_index,
                 SelectionCriteria::ReadPreference(mongodb::options::ReadPreference::Primary),
             )
-            .await?;
-        Ok(())
-    }
-
-    /// Create a new index for the `created` property and set the expiry ttl (in secods).
-    /// The session will expire when the number of seconds in the expireAfterSeconds field has passed
-    /// since the time specified in its created field.
-    /// https://docs.mongodb.com/manual/tutorial/expire-data/#expire-documents-after-a-specified-number-of-seconds
-    /// ```rust
-    /// # fn main() -> async_session::Result { async_std::task::block_on(async {
-    /// # use async_mongodb_session::MongodbSessionStore;
-    /// let store =
-    /// MongodbSessionStore::new("mongodb://127.0.0.1:27017", "db_name", "collection")
-    /// .await?;
-    /// store.index_on_created(300).await?;
-    /// # Ok(()) }) }
-    /// ```
-    pub async fn index_on_created(&self, expire_after_seconds: u32) -> Result {
-        self.create_expire_index("created", expire_after_seconds)
             .await?;
         Ok(())
     }
@@ -220,6 +171,14 @@ impl SessionStore for MongodbSessionStore {
                     Some(v) => v.clone(),
                     None => return Ok(None),
                 };
+                // mongodb runs the background task that removes expired documents runs every 60 seconds.
+                // https://docs.mongodb.com/manual/core/index-ttl/#timing-of-the-delete-operation
+                // This prevents those documents being returned
+                if let Some(expiry_at) = doc.get("expireAt").and_then(Bson::as_datetime) {
+                    if expiry_at < &Utc::now() {
+                        return Ok(None);
+                    }
+                }
                 Ok(Some(bson::from_bson::<Session>(bsession)?))
             }
         }
