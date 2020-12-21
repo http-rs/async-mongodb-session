@@ -45,6 +45,98 @@
 ```sh
 $ cargo add async-mongodb-session
 ```
+
+## Overview
+By default this library utilises the document expiration feature based on [specific clock time](https://docs.mongodb.com/manual/tutorial/expire-data/#expire-documents-at-a-specific-clock-time) supported by mongodb to auto-expire the session.
+
+For other option to offloading the session expiration to the mongodb layer check the [Advance options](#advance-options).
+
+## Example with tide
+Create an HTTP server that keep track of user visits in the session.
+
+```rust
+#[async_std::main]
+async fn main() -> tide::Result<()> {
+    tide::log::start();
+    let mut app = tide::new();
+
+    app.with(tide::sessions::SessionMiddleware::new(
+        MongodbSessionStore::new("mongodb://127.0.0.1:27017", "db_name", "collection").await?,
+        std::env::var("TIDE_SECRET")
+            .expect(
+                "Please provide a TIDE_SECRET value of at \
+                      least 32 bytes in order to run this example",
+            )
+            .as_bytes(),
+    ));
+
+    app.with(tide::utils::Before(
+        |mut request: tide::Request<()>| async move {
+            let session = request.session_mut();
+            let visits: usize = session.get("visits").unwrap_or_default();
+            session.insert("visits", visits + 1).unwrap();
+            request
+        },
+    ));
+
+    app.at("/").get(|req: tide::Request<()>| async move {
+        let visits: usize = req.session().get("visits").unwrap();
+        Ok(format!("you have visited this website {} times", visits))
+    });
+
+    app.at("/reset")
+        .get(|mut req: tide::Request<()>| async move {
+            req.session_mut().destroy();
+            Ok(tide::Redirect::new("/"))
+        });
+
+    app.listen("127.0.0.1:8080").await?;
+
+    Ok(())
+}
+```
+## Advance options
+a [specified number of seconds](https://docs.mongodb.com/manual/tutorial/expire-data/#expire-documents-after-a-specified-number-of-seconds) or in a
+
+The specified number of seconds approach is designed to enable the session time out to be managed at the mongodb layer. This approach provides a globally consistent session timeout across multiple processes but has the downside that all services using the same session collection must use the same timeout value.
+
+The specific clock time clock time approach is where you require more flexibility on your session timeouts such as a different session timeout per running service or you would prefer to manage the session time out at the process level. This is more flexible but might lead to some perceived inconsistency in session timeout depending on your upgrade/rollout strategy.
+
+The management of the expiry feature fits into the 12 factor [admin process definintion](https://12factor.net/admin-processes) so it's recommended to use an process outside of your web application to manage the expiry parameters.
+
+## Manual configuration
+
+A `created` property is available on the root of the session document that so the [expiry feature](https://docs.mongodb.com/manual/tutorial/expire-data/#expire-documents-after-a-specified-number-of-seconds) can be used in the configuration.
+
+If your application code to create a session store is something like:
+```
+let store = MongodbSessionStore::connect("mongodb://127.0.0.1:27017", "db_name", "coll_session").await?;
+```
+
+Then the script to create the expiry would be:
+```
+use db_name;
+db.coll_session.createIndex( { "created": 1 } , { expireAfterSeconds: 300 } );
+```
+
+If you wish to redefine the session duration then the index must be dropped first using:
+```
+use db_name;
+db.coll_session.dropIndex( { "created": 1 })
+db.coll_session.createIndex( { "created": 1 } , { expireAfterSeconds: 300 } );
+```
+
+Other way to set create the index is using  `index_on_created` passing the amount of seconds to expiry after the session.
+
+Also, an `expireAt` property is available on the root of the session document IFF the session expire is set. Note that  [async-session doesn't set by default](https://github.com/http-rs/async-session/blob/main/src/session.rs#L98).
+
+To enable this [expiry feature](https://docs.mongodb.com/manual/tutorial/expire-data/#expire-documents-at-a-specific-clock-time) at `index` for `expireAt` should be created calling `index_on_expiry_at` function or with this script ( following the above example )
+
+```
+use db_name;
+db.coll_session.createIndex( { "expireAt": 1 } , { expireAfterSeconds: 0 } );
+```
+
 ## Test
 
 The tests rely on an running instance of mongodb either on your local machine or remote.
