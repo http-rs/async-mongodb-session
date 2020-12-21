@@ -16,8 +16,7 @@
 #![warn(missing_docs, missing_doc_code_examples, unreachable_pub)]
 
 use async_session::chrono::{Duration, Utc};
-use async_session::{Result, Session, SessionStore};
-use async_trait::async_trait;
+use async_session::{async_trait, Result, Session, SessionStore};
 use mongodb::bson;
 use mongodb::bson::doc;
 use mongodb::options::{ReplaceOptions, SelectionCriteria};
