@@ -7,7 +7,7 @@ documentation = "https://docs.rs/async-mongodb-session"
 description = "An async-session implementation for MongoDB"
 readme = "README.md"
 edition = "2018"
-keywords = ["tide", "http", "web", "framework", "async", "session", "mongodb"]
+keywords = ["tide", "web", "async", "session", "mongodb"]
 categories = [
   "network-programming",
   "asynchronous",
