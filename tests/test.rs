@@ -108,9 +108,7 @@ mod tests {
 
             let cookie_value = store.store_session(session).await?.unwrap();
 
-            // mongodb runs the background task that removes expired documents runs every 60 seconds.
-            // https://docs.mongodb.com/manual/core/index-ttl/#timing-of-the-delete-operation
-            task::sleep(Duration::from_secs(60)).await;
+            task::sleep(Duration::from_secs(1)).await;
             let session_to_recover = store.load_session(cookie_value).await?;
 
             assert!(&session_to_recover.is_none());
