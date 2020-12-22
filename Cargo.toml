@@ -1,14 +1,18 @@
 [package]
 name = "async-mongodb-session"
-version = "1.0.0"
+version = "2.0.0"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/yoshuawuyts/async-mongodb-session"
 documentation = "https://docs.rs/async-mongodb-session"
 description = "An async-session implementation for MongoDB"
 readme = "README.md"
 edition = "2018"
-keywords = []
-categories = []
+keywords = ["tide", "http", "web", "framework", "async", "session", "mongodb"]
+categories = [
+  "network-programming",
+  "asynchronous",
+  "web-programming::http-server"
+]
 authors = [
     "Yoshua Wuyts <yoshuawuyts@gmail.com>",
     "Irina Shestak <shestak.irina@gmail.com>",
