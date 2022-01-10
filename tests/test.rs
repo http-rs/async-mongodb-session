@@ -17,7 +17,7 @@ mod tests {
     #[test]
     fn test_from_client() -> async_session::Result {
         async_std::task::block_on(async {
-            let client_options = match ClientOptions::parse(&CONNECTION_STRING).await {
+            let client_options = match ClientOptions::parse(CONNECTION_STRING.as_str()).await {
                 Ok(c) => c,
                 Err(e) => panic!("Client Options Failed: {}", e),
             };

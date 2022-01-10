@@ -1,33 +1,36 @@
 [package]
 name = "async-mongodb-session"
-version = "2.0.0"
+version = "3.0.0"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/yoshuawuyts/async-mongodb-session"
 documentation = "https://docs.rs/async-mongodb-session"
 description = "An async-session implementation for MongoDB"
 readme = "README.md"
-edition = "2018"
+edition = "2021"
 keywords = ["tide", "web", "async", "session", "mongodb"]
 categories = [
   "network-programming",
   "asynchronous",
-  "web-programming::http-server"
+  "web-programming::http-server",
 ]
 authors = [
-    "Yoshua Wuyts <yoshuawuyts@gmail.com>",
-    "Irina Shestak <shestak.irina@gmail.com>",
-    "Anton Whalley <anton@venshare.com>",
-    "Javier Viola <pepoviola@gmail.com>"
+  "Yoshua Wuyts <yoshuawuyts@gmail.com>",
+  "Irina Shestak <shestak.irina@gmail.com>",
+  "Anton Whalley <anton@venshare.com>",
+  "Javier Viola <pepoviola@gmail.com>",
+  "Aaron Erhardt <aaron.erhardt@t-online.de>",
 ]
 
 [features]
 
 [dependencies]
-mongodb = { version = "1.1.1", default-features = false, features = ["async-std-runtime"] }
-async-session = "2.0.0"
+async-session = "3"
+mongodb = { version = "2.1", default-features = false, features = [
+  "async-std-runtime",
+  "bson-chrono-0_4",
+] }
 
 [dev-dependencies]
-async-std = { version = "1.8.0", features = ["attributes"] }
-rand = {version = "0.7.3"}
+async-std = { version = "1.10", features = ["attributes"] }
 lazy_static = "1"
-tide = "0.15"
+rand = { version = "0.8" }
