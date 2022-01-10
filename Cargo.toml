@@ -22,11 +22,14 @@ authors = [
 ]
 
 [features]
+#default = ["async-std-runtime"]
+default = ["tokio-runtime"]
+async-std-runtime = ["mongodb/async-std-runtime"]
+tokio-runtime = ["mongodb/tokio-runtime"]
 
 [dependencies]
 async-session = "3"
-mongodb = { version = "2.1", default-features = false, features = [
-  "async-std-runtime",
+mongodb = { package = "mongodb", version = "2.1", default-features = false, features = [
   "bson-chrono-0_4",
 ] }
 
@@ -34,3 +37,4 @@ mongodb = { version = "2.1", default-features = false, features = [
 async-std = { version = "1.10", features = ["attributes"] }
 lazy_static = "1"
 rand = { version = "0.8" }
+tokio = { version = "1", features = ["rt"] }

@@ -17,8 +17,7 @@
 
 use async_session::chrono::{Duration, Utc};
 use async_session::{async_trait, Result, Session, SessionStore};
-use mongodb::bson::{self, Document};
-use mongodb::bson::{doc, Bson};
+use mongodb::bson::{self, doc, Bson, Document};
 use mongodb::options::{ReplaceOptions, SelectionCriteria};
 use mongodb::Client;
 
