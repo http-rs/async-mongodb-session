@@ -10,6 +10,8 @@ mod tests {
     lazy_static! {
         static ref HOST: String = env::var("HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
         static ref PORT: String = env::var("PORT").unwrap_or_else(|_| "27017".to_string());
+        static ref DATABASE: String = env::var("DATABASE").unwrap_or_else(|_| "db_name".to_string());
+        static ref COLLECTION: String = env::var("COLLECTION").unwrap_or_else(|_| "collection".to_string());
         static ref CONNECTION_STRING: String =
             format!("mongodb://{}:{}/", HOST.as_str(), PORT.as_str());
     }
@@ -26,8 +28,8 @@ mod tests {
                 Ok(c) => c,
                 Err(e) => panic!("Client Creation Failed: {}", e),
             };
-
-            let store = MongodbSessionStore::from_client(client, "db_name", "collection");
+            
+            let store = MongodbSessionStore::from_client(client, &DATABASE, &COLLECTION);
             let mut rng = rand::thread_rng();
             let n2: u16 = rng.gen();
             let key = format!("key-{}", n2);

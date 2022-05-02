@@ -3,3 +3,4 @@ tmp/
 Cargo.lock
 .DS_Store
 .vscode/launch.json
+.cargo/config.toml
