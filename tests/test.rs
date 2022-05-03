@@ -19,7 +19,7 @@ mod tests {
     #[test]
     fn test_from_client() -> async_session::Result {
         async_std::task::block_on(async {
-            let client_options = match ClientOptions::parse(&CONNECTION_STRING).await {
+            let client_options = match ClientOptions::parse(&*CONNECTION_STRING).await {
                 Ok(c) => c,
                 Err(e) => panic!("Client Options Failed: {}", e),
             };
@@ -49,7 +49,7 @@ mod tests {
     fn test_new() -> async_session::Result {
         async_std::task::block_on(async {
             let store =
-                MongodbSessionStore::new(&CONNECTION_STRING, "db_name", "collection").await?;
+                MongodbSessionStore::new(&CONNECTION_STRING, &DATABASE, &COLLECTION).await?;
 
             let mut rng = rand::thread_rng();
             let n2: u16 = rng.gen();
@@ -70,7 +70,7 @@ mod tests {
     fn test_with_expire() -> async_session::Result {
         async_std::task::block_on(async {
             let store =
-                MongodbSessionStore::new(&CONNECTION_STRING, "db_name", "collection").await?;
+                MongodbSessionStore::new(&CONNECTION_STRING, &DATABASE, &COLLECTION).await?;
 
             store.initialize().await?;
 
@@ -96,7 +96,7 @@ mod tests {
         use std::time::Duration;
         async_std::task::block_on(async {
             let store =
-                MongodbSessionStore::new(&CONNECTION_STRING, "db_name", "collection").await?;
+                MongodbSessionStore::new(&CONNECTION_STRING, &DATABASE, &COLLECTION).await?;
 
             store.initialize().await?;
 
