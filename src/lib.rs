@@ -89,7 +89,7 @@ impl MongodbSessionStore {
     /// # Ok(()) }) }
     /// ```
     pub async fn initialize(&self) -> Result {
-        &self.index_on_expiry_at().await?;
+        let _ = &self.index_on_expiry_at().await?;
         Ok(())
     }
 
