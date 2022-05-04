@@ -24,7 +24,8 @@ authors = [
 
 [dependencies]
 mongodb = { version = "2.2.1", default-features = false, features = ["async-std-runtime", "bson-chrono-0_4"] }
-async-session = "2.0.0"
+# can not go higher due to dev-dependencie "tide" which requires "async-session" in version 2.0.1
+async-session = "2.0.1"
 
 [dev-dependencies]
 async-std = { version = "1.11.0", features = ["attributes"] }
