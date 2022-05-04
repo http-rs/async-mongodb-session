@@ -23,7 +23,7 @@ authors = [
 [features]
 
 [dependencies]
-mongodb = { version = "1.1.1", default-features = false, features = ["async-std-runtime"] }
+mongodb = { version = "2.2.1", default-features = false, features = ["async-std-runtime", "bson-chrono-0_4"] }
 async-session = "2.0.0"
 
 [dev-dependencies]
