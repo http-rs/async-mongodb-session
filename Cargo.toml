@@ -22,8 +22,7 @@ authors = [
 ]
 
 [features]
-#default = ["async-std-runtime"]
-default = ["tokio-runtime"]
+default = ["async-std-runtime"]
 async-std-runtime = ["mongodb/async-std-runtime"]
 tokio-runtime = ["mongodb/tokio-runtime"]
 
