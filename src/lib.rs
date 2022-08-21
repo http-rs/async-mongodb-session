@@ -17,8 +17,8 @@
 
 use async_session::chrono::{Duration, Utc};
 use async_session::{async_trait, Result, Session, SessionStore};
-use mongodb::bson;
-use mongodb::bson::{doc, Bson};
+use mongodb::{bson, Collection};
+use mongodb::bson::{doc, Bson, Document};
 use mongodb::options::{ReplaceOptions, SelectionCriteria};
 use mongodb::Client;
 
@@ -89,7 +89,7 @@ impl MongodbSessionStore {
     /// # Ok(()) }) }
     /// ```
     pub async fn initialize(&self) -> Result {
-        &self.index_on_expiry_at().await?;
+        let _ = &self.index_on_expiry_at().await?;
         Ok(())
     }
 
@@ -162,7 +162,7 @@ impl SessionStore for MongodbSessionStore {
 
     async fn load_session(&self, cookie_value: String) -> Result<Option<Session>> {
         let id = Session::id_from_cookie_value(&cookie_value)?;
-        let coll = self.client.database(&self.db).collection(&self.coll_name);
+        let coll:Collection<Document> = self.client.database(&self.db).collection(&self.coll_name);
         let filter = doc! { "session_id": id };
         match coll.find_one(filter, None).await? {
             None => Ok(None),
@@ -175,7 +175,7 @@ impl SessionStore for MongodbSessionStore {
                 // https://docs.mongodb.com/manual/core/index-ttl/#timing-of-the-delete-operation
                 // This prevents those documents being returned
                 if let Some(expiry_at) = doc.get("expireAt").and_then(Bson::as_datetime) {
-                    if expiry_at < &Utc::now() {
+                    if expiry_at < &Utc::now().into() {
                         return Ok(None);
                     }
                 }
@@ -185,14 +185,14 @@ impl SessionStore for MongodbSessionStore {
     }
 
     async fn destroy_session(&self, session: Session) -> Result {
-        let coll = self.client.database(&self.db).collection(&self.coll_name);
+        let coll:Collection<Document> = self.client.database(&self.db).collection(&self.coll_name);
         coll.delete_one(doc! { "session_id": session.id() }, None)
             .await?;
         Ok(())
     }
 
     async fn clear_store(&self) -> Result {
-        let coll = self.client.database(&self.db).collection(&self.coll_name);
+        let coll:Collection<Document> = self.client.database(&self.db).collection(&self.coll_name);
         coll.drop(None).await?;
         self.initialize().await?;
         Ok(())

@@ -23,11 +23,12 @@ authors = [
 [features]
 
 [dependencies]
-mongodb = { version = "1.1.1", default-features = false, features = ["async-std-runtime"] }
-async-session = "2.0.0"
+mongodb = { version = "2.2.1", default-features = false, features = ["async-std-runtime", "bson-chrono-0_4"] }
+# can not go higher due to dev-dependencie "tide" which requires "async-session" in version 2.0.1
+async-session = "2.0.1"
 
 [dev-dependencies]
-async-std = { version = "1.8.0", features = ["attributes"] }
-rand = {version = "0.7.3"}
-lazy_static = "1"
-tide = "0.15"
+async-std = { version = "1.11.0", features = ["attributes"] }
+rand = {version = "0.8.5"}
+lazy_static = "1.4.0"
+tide = "0.16"
