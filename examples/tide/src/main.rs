@@ -1,6 +1,3 @@
-extern crate async_mongodb_session;
-extern crate tide;
-
 use async_mongodb_session::MongodbSessionStore;
 
 #[async_std::main]

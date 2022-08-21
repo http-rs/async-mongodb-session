@@ -13,21 +13,19 @@
 
 #![forbid(unsafe_code, future_incompatible, rust_2018_idioms)]
 #![deny(missing_debug_implementations, nonstandard_style)]
-#![warn(missing_docs, missing_doc_code_examples, unreachable_pub)]
+#![warn(missing_docs, rustdoc::missing_doc_code_examples, unreachable_pub)]
 
 use async_session::chrono::{Duration, Utc};
 use async_session::{async_trait, Result, Session, SessionStore};
-use mongodb::{bson, Collection};
-use mongodb::bson::{doc, Bson, Document};
+use mongodb::bson::{self, doc, Bson, Document};
 use mongodb::options::{ReplaceOptions, SelectionCriteria};
 use mongodb::Client;
 
 /// A MongoDB session store.
 #[derive(Debug, Clone)]
 pub struct MongodbSessionStore {
-    client: mongodb::Client,
-    db: String,
-    coll_name: String,
+    collection: mongodb::Collection<Document>,
+    database: mongodb::Database,
 }
 
 impl MongodbSessionStore {
@@ -40,9 +38,9 @@ impl MongodbSessionStore {
     /// .await?;
     /// # Ok(()) }) }
     /// ```
-    pub async fn new(uri: &str, db: &str, coll_name: &str) -> mongodb::error::Result<Self> {
+    pub async fn new(uri: &str, db_name: &str, coll_name: &str) -> mongodb::error::Result<Self> {
         let client = Client::with_uri_str(uri).await?;
-        let middleware = Self::from_client(client, db, coll_name);
+        let middleware = Self::from_client(client, db_name, coll_name);
         middleware.create_expire_index("expireAt", 0).await?;
         Ok(middleware)
     }
@@ -66,16 +64,17 @@ impl MongodbSessionStore {
     /// let store = MongodbSessionStore::from_client(client, "db_name", "collection");
     /// # Ok(()) }) }
     /// ```
-    pub fn from_client(client: Client, db: &str, coll_name: &str) -> Self {
+    pub fn from_client(client: Client, db_name: &str, coll_name: &str) -> Self {
+        let database = client.database(db_name);
+        let collection = database.collection(coll_name);
         Self {
-            client,
-            db: db.to_string(),
-            coll_name: coll_name.to_string(),
+            database,
+            collection,
         }
     }
 
     /// Initialize the default expiration mechanism, based on the document expiration
-    /// that mongodb provides https://docs.mongodb.com/manual/tutorial/expire-data/#expire-documents-at-a-specific-clock-time.
+    /// that mongodb provides <https://docs.mongodb.com/manual/tutorial/expire-data/#expire-documents-at-a-specific-clock-time>.
     /// The default ttl applyed to sessions without expiry is 20 minutes.
     /// If the `expireAt` date field contains a date in the past, mongodb considers the document expired and will be deleted.
     /// Note: mongodb runs the expiration logic every 60 seconds.
@@ -89,8 +88,7 @@ impl MongodbSessionStore {
     /// # Ok(()) }) }
     /// ```
     pub async fn initialize(&self) -> Result {
-        let _ = &self.index_on_expiry_at().await?;
-        Ok(())
+        self.index_on_expiry_at().await
     }
 
     /// private associated function
@@ -102,7 +100,7 @@ impl MongodbSessionStore {
         expire_after_seconds: u32,
     ) -> mongodb::error::Result<()> {
         let create_index = doc! {
-            "createIndexes": &self.coll_name,
+            "createIndexes": self.collection.name(),
             "indexes": [
                 {
                     "key" : { field_name: 1 },
@@ -111,8 +109,7 @@ impl MongodbSessionStore {
                 }
             ]
         };
-        self.client
-            .database(&self.db)
+        self.database
             .run_command(
                 create_index,
                 SelectionCriteria::ReadPreference(mongodb::options::ReadPreference::Primary),
@@ -123,7 +120,7 @@ impl MongodbSessionStore {
 
     /// Create a new index for the `expireAt` property, allowing to expire sessions at a specific clock time.
     /// If the `expireAt` date field contains a date in the past, mongodb considers the document expired and will be deleted.
-    /// https://docs.mongodb.com/manual/tutorial/expire-data/#expire-documents-at-a-specific-clock-time
+    /// <https://docs.mongodb.com/manual/tutorial/expire-data/#expire-documents-at-a-specific-clock-time>
     /// ```rust
     /// # fn main() -> async_session::Result { async_std::task::block_on(async {
     /// # use async_mongodb_session::MongodbSessionStore;
@@ -142,14 +139,13 @@ impl MongodbSessionStore {
 #[async_trait]
 impl SessionStore for MongodbSessionStore {
     async fn store_session(&self, session: Session) -> Result<Option<String>> {
-        let coll = self.client.database(&self.db).collection(&self.coll_name);
+        let coll = &self.collection;
 
         let value = bson::to_bson(&session)?;
         let id = session.id();
         let query = doc! { "session_id": id };
         let expire_at = match session.expiry() {
             None => Utc::now() + Duration::from_std(std::time::Duration::from_secs(1200)).unwrap(),
-
             Some(expiry) => *{ expiry },
         };
         let replacement = doc! { "session_id": id, "session": value, "expireAt": expire_at, "created": Utc::now() };
@@ -162,7 +158,7 @@ impl SessionStore for MongodbSessionStore {
 
     async fn load_session(&self, cookie_value: String) -> Result<Option<Session>> {
         let id = Session::id_from_cookie_value(&cookie_value)?;
-        let coll:Collection<Document> = self.client.database(&self.db).collection(&self.coll_name);
+        let coll = &self.collection;
         let filter = doc! { "session_id": id };
         match coll.find_one(filter, None).await? {
             None => Ok(None),
@@ -175,7 +171,7 @@ impl SessionStore for MongodbSessionStore {
                 // https://docs.mongodb.com/manual/core/index-ttl/#timing-of-the-delete-operation
                 // This prevents those documents being returned
                 if let Some(expiry_at) = doc.get("expireAt").and_then(Bson::as_datetime) {
-                    if expiry_at < &Utc::now().into() {
+                    if expiry_at.to_chrono() < Utc::now() {
                         return Ok(None);
                     }
                 }
@@ -185,14 +181,14 @@ impl SessionStore for MongodbSessionStore {
     }
 
     async fn destroy_session(&self, session: Session) -> Result {
-        let coll:Collection<Document> = self.client.database(&self.db).collection(&self.coll_name);
+        let coll = &self.collection;
         coll.delete_one(doc! { "session_id": session.id() }, None)
             .await?;
         Ok(())
     }
 
     async fn clear_store(&self) -> Result {
-        let coll:Collection<Document> = self.client.database(&self.db).collection(&self.coll_name);
+        let coll = &self.collection;
         coll.drop(None).await?;
         self.initialize().await?;
         Ok(())
