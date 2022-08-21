@@ -88,8 +88,7 @@ impl MongodbSessionStore {
     /// # Ok(()) }) }
     /// ```
     pub async fn initialize(&self) -> Result {
-        self.index_on_expiry_at().await?;
-        Ok(())
+        self.index_on_expiry_at().await
     }
 
     /// private associated function
@@ -147,7 +146,6 @@ impl SessionStore for MongodbSessionStore {
         let query = doc! { "session_id": id };
         let expire_at = match session.expiry() {
             None => Utc::now() + Duration::from_std(std::time::Duration::from_secs(1200)).unwrap(),
-
             Some(expiry) => *{ expiry },
         };
         let replacement = doc! { "session_id": id, "session": value, "expireAt": expire_at, "created": Utc::now() };
