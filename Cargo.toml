@@ -28,12 +28,12 @@ tokio-runtime = ["mongodb/tokio-runtime"]
 
 [dependencies]
 async-session = "3"
-mongodb = { package = "mongodb", version = "2.1", default-features = false, features = [
+mongodb = { package = "mongodb", version = "2.3", default-features = false, features = [
   "bson-chrono-0_4",
 ] }
 
 [dev-dependencies]
-async-std = { version = "1.10", features = ["attributes"] }
-lazy_static = "1"
-rand = { version = "0.8" }
-tokio = { version = "1", features = ["rt"] }
+async-std = { version = "1.12", features = ["attributes"] }
+lazy_static = "1.4"
+rand = "0.8.5"
+tokio = { version = "1.20", features = ["rt"] }
